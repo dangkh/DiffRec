@@ -13,6 +13,10 @@ def data_load(train_path, valid_path, test_path):
     valid_list = np.load(valid_path, allow_pickle=True)
     test_list = np.load(test_path, allow_pickle=True)
 
+    limitMax = 200000
+    train_list = train_list[:limitMax]
+    valid_list = valid_list[:limitMax//3]
+    test_list = test_list[:limitMax//3]
     uid_max = 0
     iid_max = 0
     train_dict = {}
@@ -25,7 +29,13 @@ def data_load(train_path, valid_path, test_path):
             uid_max = uid
         if iid > iid_max:
             iid_max = iid
-    
+
+    for dataList in [valid_list, test_list]:
+        for uid, iid in dataList:
+            if uid > uid_max:
+                uid_max = uid
+            if iid > iid_max:
+                iid_max = iid            
     n_user = uid_max + 1
     n_item = iid_max + 1
     print(f'user num: {n_user}')
