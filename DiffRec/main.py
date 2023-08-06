@@ -42,7 +42,7 @@ parser.add_argument('--data_path', type=str, default='../datasets/', help='load 
 parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
 parser.add_argument('--weight_decay', type=float, default=0.0)
 parser.add_argument('--batch_size', type=int, default=400)
-parser.add_argument('--epochs', type=int, default=1000, help='upper epoch limit')
+parser.add_argument('--epochs', type=int, default=10, help='upper epoch limit')
 parser.add_argument('--topN', type=str, default='[10, 20, 50, 100]')
 parser.add_argument('--tst_w_val', action='store_true', help='test with validation')
 parser.add_argument('--cuda', action='store_true', help='use CUDA')
@@ -71,9 +71,9 @@ parser.add_argument('--reweight', type=bool, default=True, help='assign differen
 args = parser.parse_args()
 print("args:", args)
 
-os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
-device = torch.device("cuda:0" if args.cuda else "cpu")
-
+# os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
+# device = torch.device("cuda:0" if args.cuda else "cpu")
+device = torch.device("cpu")
 print("Starting time: ", time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())))
 
 ### DATA LOAD ###
@@ -83,7 +83,7 @@ test_path = args.data_path + 'test_list.npy'
 
 train_data, valid_y_data, test_y_data, n_user, n_item = data_utils.data_load(train_path, valid_path, test_path)
 train_dataset = data_utils.DataDiffusion(torch.FloatTensor(train_data.A))
-train_loader = DataLoader(train_dataset, batch_size=args.batch_size, pin_memory=True, shuffle=True, num_workers=4, worker_init_fn=worker_init_fn)
+train_loader = DataLoader(train_dataset, batch_size=args.batch_size, pin_memory=True, shuffle=True)
 test_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=False)
 
 if args.tst_w_val:
