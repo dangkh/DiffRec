@@ -40,10 +40,10 @@ def seed_worker(worker_id):
     np.random.seed(worker_seed)
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--dataset', type=str, default='yelp_clean', help='choose the dataset')
-parser.add_argument('--data_path', type=str, default='./datasets/', help='load data path')
-parser.add_argument('--emb_path', type=str, default='./datasets/')
-parser.add_argument('--lr1', type=float, default=0.0001, help='learning rate for Autoencoder')
+parser.add_argument('--dataset', type=str, default='ml-1m_clean', help='choose the dataset')
+parser.add_argument('--data_path', type=str, default='../datasets/', help='load data path')
+parser.add_argument('--emb_path', type=str, default='../datasets/')
+parser.add_argument('--lr1', type=float, default=0.0005, help='learning rate for Autoencoder')
 parser.add_argument('--lr2', type=float, default=0.0001, help='learning rate for MLP')
 parser.add_argument('--wd1', type=float, default=0.0, help='weight decay for Autoencoder')
 parser.add_argument('--wd2', type=float, default=0.0, help='weight decay for MLP')
@@ -58,11 +58,11 @@ parser.add_argument('--log_name', type=str, default='log', help='the log name')
 parser.add_argument('--round', type=int, default=1, help='record the experiment')
 
 # params for the Autoencoder
-parser.add_argument('--n_cate', type=int, default=3, help='category num of items')
+parser.add_argument('--n_cate', type=int, default=2, help='category num of items')
 parser.add_argument('--in_dims', type=str, default='[300]', help='the dims for the encoder')
 parser.add_argument('--out_dims', type=str, default='[]', help='the hidden dims for the decoder')
 parser.add_argument('--act_func', type=str, default='tanh', help='activation function for autoencoder')
-parser.add_argument('--lamda', type=float, default=0.03, help='hyper-parameter of multinomial log-likelihood for AE: 0.01, 0.02, 0.03, 0.05')
+parser.add_argument('--lamda', type=float, default=0.05, help='hyper-parameter of multinomial log-likelihood for AE: 0.01, 0.02, 0.03, 0.05')
 parser.add_argument('--optimizer1', type=str, default='AdamW', help='optimizer for AE: Adam, AdamW, SGD, Adagrad, Momentum')
 parser.add_argument('--anneal_cap', type=float, default=0.005)
 parser.add_argument('--anneal_steps', type=int, default=500)
@@ -82,11 +82,11 @@ parser.add_argument('--optimizer2', type=str, default='AdamW', help='optimizer f
 parser.add_argument('--mean_type', type=str, default='x0', help='MeanType for diffusion: x0, eps')
 parser.add_argument('--steps', type=int, default=5, help='diffusion steps')
 parser.add_argument('--noise_schedule', type=str, default='linear-var', help='the schedule for noise generating')
-parser.add_argument('--noise_scale', type=float, default=0.1, help='noise scale for noise generating')
-parser.add_argument('--noise_min', type=float, default=0.0001)
-parser.add_argument('--noise_max', type=float, default=0.02)
+parser.add_argument('--noise_scale', type=float, default=0.5, help='noise scale for noise generating')
+parser.add_argument('--noise_min', type=float, default=0.0005)
+parser.add_argument('--noise_max', type=float, default=0.001)
 parser.add_argument('--sampling_noise', type=bool, default=False, help='sampling with noise or not')
-parser.add_argument('--sampling_steps', type=int, default=10, help='steps for sampling/denoising')
+parser.add_argument('--sampling_steps', type=int, default=0, help='steps for sampling/denoising')
 parser.add_argument('--reweight', type=bool, default=True, help='assign different weight to different timestep or not')
 
 args = parser.parse_args()
@@ -104,7 +104,7 @@ test_path = args.data_path + 'test_list.npy'
 
 train_data, valid_y_data, test_y_data, n_user, n_item = data_utils.data_load(train_path, valid_path, test_path)
 train_dataset = data_utils.DataDiffusion(torch.FloatTensor(train_data.A))
-train_loader = DataLoader(train_dataset, batch_size=args.batch_size, pin_memory=True, shuffle=True, num_workers=4, worker_init_fn=worker_init_fn)
+train_loader = DataLoader(train_dataset, batch_size=args.batch_size, pin_memory=True, shuffle=True)
 test_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=False)
 
 if args.tst_w_val:
