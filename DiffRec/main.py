@@ -42,7 +42,7 @@ parser.add_argument('--data_path', type=str, default='../datasets/', help='load 
 parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
 parser.add_argument('--weight_decay', type=float, default=0.0)
 parser.add_argument('--batch_size', type=int, default=400)
-parser.add_argument('--epochs', type=int, default=10, help='upper epoch limit')
+parser.add_argument('--epochs', type=int, default=200, help='upper epoch limit')
 parser.add_argument('--topN', type=str, default='[10, 20, 50, 100]')
 parser.add_argument('--tst_w_val', action='store_true', help='test with validation')
 parser.add_argument('--cuda', action='store_true', help='use CUDA')
@@ -128,7 +128,7 @@ def evaluate(data_loader, data_te, mask_his, topN):
     target_items = []
     for i in range(e_N):
         target_items.append(data_te[i, :].nonzero()[1].tolist())
-    
+
     with torch.no_grad():
         for batch_idx, batch in enumerate(data_loader):
             his_data = mask_his[e_idxlist[batch_idx*args.batch_size:batch_idx*args.batch_size+len(batch)]]

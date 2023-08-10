@@ -95,7 +95,11 @@ train_path = args.data_path + 'train_list.npy'
 valid_path = args.data_path + 'valid_list.npy'
 test_path = args.data_path + 'test_list.npy'
 
+
 train_data, valid_y_data, test_y_data, n_user, n_item = data_utils.data_load(train_path, valid_path, test_path)
+print(train_data.shape, valid_y_data.shape, test_y_data.shape)
+
+stop
 train_dataset = data_utils.DataDiffusion(torch.FloatTensor(train_data.A))
 train_loader = DataLoader(train_dataset, batch_size=args.batch_size, pin_memory=True, shuffle=True)
 test_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=False)
