@@ -122,7 +122,9 @@ class AutoEncoder(nn.Module):
                             raise ValueError
                     decoder_modules[i].pop()
                 self.decoder = nn.ModuleList([nn.Sequential(*decoder_modules[i]) for i in range(n_cate)])
-        self.reduceDim = nn.Linear(self.maxItem * 64, self.n_item)
+        self.reduceDim = nn.Linear(self.maxItem * 64, self.in_dims[0])
+        self.predictItem = nn.Linear(self.in_dims[0], self.n_item)
+        self.activateF = nn.Sigmoid()
         self.apply(xavier_normal_initialization)
     
     def index2itemEm(self, itemIndx):
@@ -143,9 +145,12 @@ class AutoEncoder(nn.Module):
         return torch.torch.vstack(rBatch)
 
     def Encode(self, batch):
-        batch = self.batch2itemEmb(batch)
-        batch = self.dropout(batch)
-        batch = self.reduceDim(batch)
+        aebatch = self.batch2itemEmb(batch)
+        aebatch = self.dropout(aebatch)
+        aebatch = self.reduceDim(aebatch)
+
+        return batch, aebatch, ''
+
         if self.n_cate == 1:
             hidden = self.encoder(batch)
             mu = hidden[:, :self.in_dims[-1]]
@@ -189,6 +194,8 @@ class AutoEncoder(nn.Module):
         return eps.mul(std).add_(mu)
     
     def Decode(self, batch):
+        return self.activateF(self.predictItem(batch))
+
         if len(self.out_dims) == 0 or self.n_cate == 1:  # one-layer decoder
             return self.decoder(batch)
         else:

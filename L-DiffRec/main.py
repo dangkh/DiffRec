@@ -58,7 +58,7 @@ parser.add_argument('--log_name', type=str, default='log', help='the log name')
 parser.add_argument('--round', type=int, default=1, help='record the experiment')
 
 # params for the Autoencoder
-parser.add_argument('--n_cate', type=int, default=2, help='category num of items')
+parser.add_argument('--n_cate', type=int, default=1, help='category num of items')
 parser.add_argument('--in_dims', type=str, default='[300]', help='the dims for the encoder')
 parser.add_argument('--out_dims', type=str, default='[]', help='the hidden dims for the decoder')
 parser.add_argument('--act_func', type=str, default='tanh', help='activation function for autoencoder')
@@ -263,7 +263,6 @@ for epoch in range(1, args.epochs + 1):
         optimizer1.zero_grad()
         optimizer2.zero_grad()
         batch_cate, batch_latent, vae_kl = Autoencoder.Encode(batch)
-
         terms = diffusion.training_losses(model, batch_latent, args.reweight)
         elbo = terms["loss"].mean()  # loss from diffusion
         batch_latent_recon = terms["pred_xstart"]
@@ -275,12 +274,12 @@ for epoch in range(1, args.epochs + 1):
         else:
             lamda = max(args.lamda, args.anneal_cap)
         
-        if args.vae_anneal_steps > 0:
-            anneal = min(args.vae_anneal_cap, 1. * update_count_vae / args.vae_anneal_steps)
-        else:
-            anneal = args.vae_anneal_cap
+        # if args.vae_anneal_steps > 0:
+        #     anneal = min(args.vae_anneal_cap, 1. * update_count_vae / args.vae_anneal_steps)
+        # else:
+        #     anneal = args.vae_anneal_cap
 
-        vae_loss = compute_loss(batch_recon, batch_cate) + anneal * vae_kl  # loss from autoencoder
+        vae_loss = compute_loss(batch_recon, batch_cate) # + anneal * vae_kl  # loss from autoencoder
         
         if args.reweight:
             loss = lamda * elbo + vae_loss
