@@ -104,7 +104,8 @@ test_path = args.data_path + 'test_list.npy'
 
 train_data, valid_y_data, test_y_data, n_user, n_item = data_utils.data_load(train_path, valid_path, test_path)
 train_dataset = data_utils.DataDiffusion(torch.FloatTensor(train_data.A))
-train_loader = DataLoader(train_dataset, batch_size=args.batch_size, pin_memory=True, shuffle=True)
+# train_loader = DataLoader(train_dataset, batch_size=args.batch_size, pin_memory=True, shuffle=True)
+train_loader = DataLoader(train_dataset, batch_size=args.batch_size, pin_memory=True, shuffle=True, num_workers=4, worker_init_fn=worker_init_fn)
 test_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=False)
 
 if args.tst_w_val:
@@ -172,6 +173,25 @@ elif args.optimizer2 == 'Momentum':
 print("models ready.")
 
 
+def index2itemEm(itemIndx):
+    output = []
+    clickedItem = torch.where(itemIndx == 1)[0]
+    for ii in clickedItem:
+        output.append(item_emb[ii.item()])
+    compensationNum = 1000 - len(clickedItem)
+    compensationFeat = torch.zeros(compensationNum*64)
+    output.append(compensationFeat)
+    
+    return torch.cat(output)
+
+
+def batch2itemEmb(batch):
+    rBatch = []
+    for ii in range(len(batch)):
+        rBatch.append(index2itemEm(batch[ii]))
+    return torch.vstack(rBatch).to(device)
+
+
 def evaluate(data_loader, data_te, mask_his, topN):
     model.eval()
     Autoencoder.eval()
@@ -188,11 +208,12 @@ def evaluate(data_loader, data_te, mask_his, topN):
     
     with torch.no_grad():
         for batch_idx, batch in enumerate(data_loader):
-            batch = batch.to(device)
+            aebatch = batch2itemEmb(batch)
+            aebatch = aebatch.to(device)
             # mask map
-            his_data = mask_his[e_idxlist[batch_idx*args.batch_size:batch_idx*args.batch_size+len(batch)]]
+            his_data = mask_his[e_idxlist[batch_idx*args.batch_size:batch_idx*args.batch_size+len(aebatch)]]
 
-            _, batch_latent, _ = Autoencoder.Encode(batch)
+            _, batch_latent, _ = Autoencoder.Encode(aebatch)
             batch_latent_recon = diffusion.p_sample(model, batch_latent, args.sampling_steps, args.sampling_noise)
             prediction = Autoencoder.Decode(batch_latent_recon)  # [batch_size, n1_items + n2_items + n3_items]
 
@@ -243,6 +264,7 @@ else:
 
 print("Start training...")
 
+listBatchTrain = []
 for epoch in range(1, args.epochs + 1):
     if epoch - best_epoch >= 20:
         print('-'*18)
@@ -258,11 +280,16 @@ for epoch in range(1, args.epochs + 1):
     total_loss = 0.0
     
     for batch_idx, batch in enumerate(train_loader):
-        batch = batch.to(device)
+        if epoch == 1:
+            aebatch = batch2itemEmb(batch)
+            listBatchTrain.append(aebatch)
+        else:
+            aebatch = listBatchTrain[batch_idx]
+        aebatch = aebatch.to(device)
         batch_count += 1
         optimizer1.zero_grad()
         optimizer2.zero_grad()
-        batch_cate, batch_latent, vae_kl = Autoencoder.Encode(batch)
+        _, batch_latent, _ = Autoencoder.Encode(aebatch)
         terms = diffusion.training_losses(model, batch_latent, args.reweight)
         elbo = terms["loss"].mean()  # loss from diffusion
         batch_latent_recon = terms["pred_xstart"]
@@ -279,7 +306,7 @@ for epoch in range(1, args.epochs + 1):
         # else:
         #     anneal = args.vae_anneal_cap
 
-        vae_loss = compute_loss(batch_recon, batch_cate) # + anneal * vae_kl  # loss from autoencoder
+        vae_loss = compute_loss(batch_recon, batch) # + anneal * vae_kl  # loss from autoencoder
         
         if args.reweight:
             loss = lamda * elbo + vae_loss

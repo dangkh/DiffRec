@@ -6,6 +6,7 @@ import math
 from torch.nn.init import xavier_normal_, constant_, xavier_uniform_
 from kmeans_pytorch import kmeans
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class AutoEncoder(nn.Module):
     """
@@ -127,29 +128,12 @@ class AutoEncoder(nn.Module):
         self.activateF = nn.Sigmoid()
         self.apply(xavier_normal_initialization)
     
-    def index2itemEm(self, itemIndx):
-        output = []
-        clickedItem = torch.where(itemIndx == 1)[0]
-        for ii in clickedItem:
-            output.append(self.item_emb[ii.item()])
-        compensationNum = self.maxItem - len(clickedItem)
-        compensationFeat = torch.zeros(compensationNum*64)
-        output.append(compensationFeat)
-        
-        return torch.cat(output)
-
-    def batch2itemEmb(self, batch):
-        rBatch = []
-        for ii in range(len(batch)):
-            rBatch.append(self.index2itemEm(batch[ii]))
-        return torch.torch.vstack(rBatch)
 
     def Encode(self, batch):
-        aebatch = self.batch2itemEmb(batch)
-        aebatch = self.dropout(aebatch)
-        aebatch = self.reduceDim(aebatch)
+        batch = self.dropout(batch)
+        batch = self.reduceDim(batch)
 
-        return batch, aebatch, ''
+        return '', batch, ''
 
         if self.n_cate == 1:
             hidden = self.encoder(batch)
