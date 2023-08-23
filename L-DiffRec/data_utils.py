@@ -30,7 +30,6 @@ def data_load(train_path, valid_path, test_path):
     n_item = iid_max + 1
     print(f'user num: {n_user}')
     print(f'item num: {n_item}')
-
     train_data = sp.csr_matrix((np.ones_like(train_list[:, 0]), \
         (train_list[:, 0], train_list[:, 1])), dtype='float64', \
         shape=(n_user, n_item))

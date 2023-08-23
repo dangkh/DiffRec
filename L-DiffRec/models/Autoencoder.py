@@ -123,9 +123,24 @@ class AutoEncoder(nn.Module):
                 self.decoder = nn.ModuleList([nn.Sequential(*decoder_modules[i]) for i in range(n_cate)])
             
         self.apply(xavier_normal_initialization)
-        
+    
+    def batch2itemEmb(self, batch):
+        numberItem = len(self.item_emb)
+
+        newB = self.item_emb.repeat(numberItem,1,1)
+        rBatch = []
+        for ii in range(len(batch)):
+            tmp = torch.matmul(batch[ii], newB).reshape(-1)
+            rBatch.append(tmp)
+
+        return torch.cat(rBatch, dim=1)
+
     def Encode(self, batch):
+        batch = self.batch2itemEmb(batch)
+        print(batch.shape)
+        stop
         batch = self.dropout(batch)
+        batch = self.reduceDim(batch)
         if self.n_cate == 1:
             hidden = self.encoder(batch)
             mu = hidden[:, :self.in_dims[-1]]
@@ -161,7 +176,6 @@ class AutoEncoder(nn.Module):
                 latent = mu
 
             kl_divergence = -0.5 * torch.mean(torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1))
-
             return torch.cat(tuple(batch_cate), dim=-1), latent, kl_divergence
     
     def reparamterization(self, mu, logvar):

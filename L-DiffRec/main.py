@@ -189,7 +189,6 @@ def evaluate(data_loader, data_te, mask_his, topN):
     with torch.no_grad():
         for batch_idx, batch in enumerate(data_loader):
             batch = batch.to(device)
-
             # mask map
             his_data = mask_his[e_idxlist[batch_idx*args.batch_size:batch_idx*args.batch_size+len(batch)]]
 
@@ -263,7 +262,6 @@ for epoch in range(1, args.epochs + 1):
         batch_count += 1
         optimizer1.zero_grad()
         optimizer2.zero_grad()
-
         batch_cate, batch_latent, vae_kl = Autoencoder.Encode(batch)
 
         terms = diffusion.training_losses(model, batch_latent, args.reweight)
