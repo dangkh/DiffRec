@@ -15,6 +15,7 @@ class AutoEncoder(nn.Module):
         super(AutoEncoder, self).__init__()
 
         self.item_emb = item_emb
+        self.maxItem = 1000
         self.n_cate = n_cate
         self.in_dims = in_dims
         self.out_dims = out_dims
@@ -121,24 +122,28 @@ class AutoEncoder(nn.Module):
                             raise ValueError
                     decoder_modules[i].pop()
                 self.decoder = nn.ModuleList([nn.Sequential(*decoder_modules[i]) for i in range(n_cate)])
-            
+        self.reduceDim = nn.Linear(self.maxItem * 64, self.n_item)
         self.apply(xavier_normal_initialization)
     
-    def batch2itemEmb(self, batch):
-        numberItem = len(self.item_emb)
+    def index2itemEm(self, itemIndx):
+        output = []
+        clickedItem = torch.where(itemIndx == 1)[0]
+        for ii in clickedItem:
+            output.append(self.item_emb[ii.item()])
+        compensationNum = self.maxItem - len(clickedItem)
+        compensationFeat = torch.zeros(compensationNum*64)
+        output.append(compensationFeat)
+        
+        return torch.cat(output)
 
-        newB = self.item_emb.repeat(numberItem,1,1)
+    def batch2itemEmb(self, batch):
         rBatch = []
         for ii in range(len(batch)):
-            tmp = torch.matmul(batch[ii], newB).reshape(-1)
-            rBatch.append(tmp)
-
-        return torch.cat(rBatch, dim=1)
+            rBatch.append(self.index2itemEm(batch[ii]))
+        return torch.torch.vstack(rBatch)
 
     def Encode(self, batch):
         batch = self.batch2itemEmb(batch)
-        print(batch.shape)
-        stop
         batch = self.dropout(batch)
         batch = self.reduceDim(batch)
         if self.n_cate == 1:
