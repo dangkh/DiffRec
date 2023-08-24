@@ -44,7 +44,7 @@ parser.add_argument('--dataset', type=str, default='ml-1m_clean', help='choose t
 parser.add_argument('--data_path', type=str, default='../datasets/', help='load data path')
 parser.add_argument('--emb_path', type=str, default='../datasets/')
 parser.add_argument('--lr1', type=float, default=0.0005, help='learning rate for Autoencoder')
-parser.add_argument('--lr2', type=float, default=0.0001, help='learning rate for MLP')
+parser.add_argument('--lr2', type=float, default=0.0003, help='learning rate for MLP')
 parser.add_argument('--wd1', type=float, default=0.0, help='weight decay for Autoencoder')
 parser.add_argument('--wd2', type=float, default=0.0, help='weight decay for MLP')
 parser.add_argument('--batch_size', type=int, default=400)
@@ -315,13 +315,13 @@ for epoch in range(1, args.epochs + 1):
         # else:
         #     anneal = args.vae_anneal_cap
 
-        vae_loss = compute_loss(batch_recon, batch) # + anneal * vae_kl  # loss from autoencoder
+        # vae_loss = compute_loss(batch_recon, batch) # + anneal * vae_kl  # loss from autoencoder
         
-        if args.reweight:
-            loss = lamda * elbo + vae_loss
-        else:
-            loss = elbo + lamda * vae_loss
-        
+        # if args.reweight:
+        #     loss = lamda * elbo + vae_loss
+        # else:
+        #     loss = elbo + lamda * vae_loss
+        loss = elbo
         update_count_vae += 1
 
         total_loss += loss

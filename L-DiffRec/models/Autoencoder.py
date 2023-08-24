@@ -124,7 +124,8 @@ class AutoEncoder(nn.Module):
                     decoder_modules[i].pop()
                 self.decoder = nn.ModuleList([nn.Sequential(*decoder_modules[i]) for i in range(n_cate)])
         self.reduceDim = nn.Linear(self.maxItem * 64, self.in_dims[0])
-        self.predictItem = nn.Linear(self.in_dims[0], self.n_item)
+        self.decodeDim = nn.Linear(self.in_dims[0], self.maxItem * 64)
+        self.predictItem = nn.Linear(self.maxItem * 64, self.n_item)
         self.activateF = nn.Sigmoid()
         self.loss = torch.nn.MSELoss()
         self.apply(xavier_normal_initialization)
@@ -179,7 +180,7 @@ class AutoEncoder(nn.Module):
         return eps.mul(std).add_(mu)
     
     def Decode(self, batch):
-        return self.activateF(self.predictItem(batch))
+        return self.activateF(self.predictItem(self.decodeDim(batch)))
 
         if len(self.out_dims) == 0 or self.n_cate == 1:  # one-layer decoder
             return self.decoder(batch)
@@ -198,7 +199,7 @@ class AutoEncoder(nn.Module):
             return pred
     
 def compute_loss(recon_x, x):
-    return self.loss(recon_x, x)
+    return torch.nn.MSELoss()(recon_x, x)
     # return -torch.mean(torch.sum(F.log_softmax(recon_x, 1) * x, -1))  # multinomial log likelihood in MultVAE
 
 
