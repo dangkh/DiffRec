@@ -126,6 +126,7 @@ class AutoEncoder(nn.Module):
         self.reduceDim = nn.Linear(self.maxItem * 64, self.in_dims[0])
         self.predictItem = nn.Linear(self.in_dims[0], self.n_item)
         self.activateF = nn.Sigmoid()
+        self.loss = torch.nn.MSELoss()
         self.apply(xavier_normal_initialization)
     
 
@@ -197,7 +198,8 @@ class AutoEncoder(nn.Module):
             return pred
     
 def compute_loss(recon_x, x):
-    return -torch.mean(torch.sum(F.log_softmax(recon_x, 1) * x, -1))  # multinomial log likelihood in MultVAE
+    return self.loss(recon_x, x)
+    # return -torch.mean(torch.sum(F.log_softmax(recon_x, 1) * x, -1))  # multinomial log likelihood in MultVAE
 
 
 def xavier_normal_initialization(module):

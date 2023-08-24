@@ -105,7 +105,7 @@ test_path = args.data_path + 'test_list.npy'
 train_data, valid_y_data, test_y_data, n_user, n_item = data_utils.data_load(train_path, valid_path, test_path)
 train_dataset = data_utils.DataDiffusion(torch.FloatTensor(train_data.A))
 # train_loader = DataLoader(train_dataset, batch_size=args.batch_size, pin_memory=True, shuffle=True)
-train_loader = DataLoader(train_dataset, batch_size=args.batch_size, pin_memory=True, shuffle=True, num_workers=4, worker_init_fn=worker_init_fn)
+train_loader = DataLoader(train_dataset, batch_size=args.batch_size, pin_memory=True, shuffle=False, num_workers=4, worker_init_fn=worker_init_fn)
 test_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=False)
 
 if args.tst_w_val:
@@ -191,8 +191,11 @@ def batch2itemEmb(batch):
         rBatch.append(index2itemEm(batch[ii]))
     return torch.vstack(rBatch).to(device)
 
-
+firstEval = True
+listBatchTest = []
 def evaluate(data_loader, data_te, mask_his, topN):
+    global firstEval
+    global listBatchTest
     model.eval()
     Autoencoder.eval()
     e_idxlist = list(range(mask_his.shape[0]))
@@ -208,8 +211,13 @@ def evaluate(data_loader, data_te, mask_his, topN):
     
     with torch.no_grad():
         for batch_idx, batch in enumerate(data_loader):
-            aebatch = batch2itemEmb(batch)
+            if firstEval:
+                aebatch = batch2itemEmb(batch)
+                listBatchTest.append(aebatch)
+            else:
+                aebatch = listBatchTest[batch_idx]
             aebatch = aebatch.to(device)
+            batch = batch.to(device)
             # mask map
             his_data = mask_his[e_idxlist[batch_idx*args.batch_size:batch_idx*args.batch_size+len(aebatch)]]
 
@@ -230,7 +238,7 @@ def evaluate(data_loader, data_te, mask_his, topN):
             predict_items.extend(indices)
 
     test_results = evaluate_utils.computeTopNAccuracy(target_items, predict_items, topN)
-
+    firstEval = False
     return test_results
 
 best_recall, best_epoch = -100, 0
@@ -286,6 +294,7 @@ for epoch in range(1, args.epochs + 1):
         else:
             aebatch = listBatchTrain[batch_idx]
         aebatch = aebatch.to(device)
+        batch = batch.to(device)
         batch_count += 1
         optimizer1.zero_grad()
         optimizer2.zero_grad()
