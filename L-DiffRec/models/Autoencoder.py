@@ -124,8 +124,8 @@ class AutoEncoder(nn.Module):
                     decoder_modules[i].pop()
                 self.decoder = nn.ModuleList([nn.Sequential(*decoder_modules[i]) for i in range(n_cate)])
         self.reduceDim = nn.Linear(self.maxItem * 64, self.in_dims[0])
-        self.decodeDim = nn.Linear(self.in_dims[0], self.maxItem * 64)
-        self.predictItem = nn.Linear(self.maxItem * 64, self.n_item)
+        # self.decodeDim = nn.Linear(self.in_dims[0], self.maxItem * 64)
+        self.predictItem = nn.Linear(self.in_dims[0], self.n_item)
         self.activateF = nn.Sigmoid()
         self.loss = torch.nn.MSELoss()
         self.apply(xavier_normal_initialization)
@@ -180,7 +180,7 @@ class AutoEncoder(nn.Module):
         return eps.mul(std).add_(mu)
     
     def Decode(self, batch):
-        return self.activateF(self.predictItem(self.decodeDim(batch)))
+        return self.activateF(self.predictItem(batch))
 
         if len(self.out_dims) == 0 or self.n_cate == 1:  # one-layer decoder
             return self.decoder(batch)

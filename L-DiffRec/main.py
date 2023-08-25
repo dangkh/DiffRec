@@ -273,11 +273,14 @@ else:
 print("Start training...")
 
 listBatchTrain = []
+crossELoss = torch.nn.CrossEntropyLoss()
+sfm = torch.nn.Softmax(dim = 1)
+listSFBatch = []
 for epoch in range(1, args.epochs + 1):
-    if epoch - best_epoch >= 20:
-        print('-'*18)
-        print('Exiting from training early')
-        break
+    # if epoch - best_epoch >= 20:
+    #     print('-'*18)
+    #     print('Exiting from training early')
+    #     break
 
     Autoencoder.train()
     model.train()
@@ -291,10 +294,14 @@ for epoch in range(1, args.epochs + 1):
         if epoch == 1:
             aebatch = batch2itemEmb(batch)
             listBatchTrain.append(aebatch)
+            label = sfm(batch)
+            listSFBatch.append(label)
         else:
             aebatch = listBatchTrain[batch_idx]
+            label = listSFBatch[batch_idx]
         aebatch = aebatch.to(device)
         batch = batch.to(device)
+        label = label.to(device)
         batch_count += 1
         optimizer1.zero_grad()
         optimizer2.zero_grad()
@@ -310,18 +317,18 @@ for epoch in range(1, args.epochs + 1):
         else:
             lamda = max(args.lamda, args.anneal_cap)
         
-        # if args.vae_anneal_steps > 0:
-        #     anneal = min(args.vae_anneal_cap, 1. * update_count_vae / args.vae_anneal_steps)
-        # else:
-        #     anneal = args.vae_anneal_cap
+        if args.vae_anneal_steps > 0:
+            anneal = min(args.vae_anneal_cap, 1. * update_count_vae / args.vae_anneal_steps)
+        else:
+            anneal = args.vae_anneal_cap
 
         # vae_loss = compute_loss(batch_recon, batch) # + anneal * vae_kl  # loss from autoencoder
-        
-        # if args.reweight:
-        #     loss = lamda * elbo + vae_loss
-        # else:
-        #     loss = elbo + lamda * vae_loss
-        loss = elbo
+        vae_loss = crossELoss(batch_recon, label)
+
+        if args.reweight:
+            loss = lamda * elbo + vae_loss
+        else:
+            loss = elbo + lamda * vae_loss
         update_count_vae += 1
 
         total_loss += loss

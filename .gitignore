@@ -2,3 +2,4 @@
 *.npy
 *.pyc
 *.pth
+.DS_Store
