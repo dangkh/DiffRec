@@ -6,7 +6,6 @@ import math
 from torch.nn.init import xavier_normal_, constant_, xavier_uniform_
 from kmeans_pytorch import kmeans
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class AutoEncoder(nn.Module):
     """
@@ -16,7 +15,6 @@ class AutoEncoder(nn.Module):
         super(AutoEncoder, self).__init__()
 
         self.item_emb = item_emb
-        self.maxItem = 1000
         self.n_cate = n_cate
         self.in_dims = in_dims
         self.out_dims = out_dims
@@ -65,8 +63,10 @@ class AutoEncoder(nn.Module):
             for i in range(n_cate):
                 idx = np.argwhere(self.cluster_ids.numpy() == i).squeeze().tolist()
                 category_idx.append(torch.tensor(idx, dtype=int))
+
             self.category_idx = category_idx  # [cate1: [iid1, iid2, ...], cate2: [iid3, iid4, ...], cate3: [iid5, iid6, ...]]
             self.category_map = torch.cat(tuple(category_idx), dim=-1)  # map
+
             self.category_len = [len(self.category_idx[i]) for i in range(n_cate)]  # item num in each category
             print("category length: ", self.category_len)
             assert sum(self.category_len) == self.n_item
@@ -123,20 +123,11 @@ class AutoEncoder(nn.Module):
                             raise ValueError
                     decoder_modules[i].pop()
                 self.decoder = nn.ModuleList([nn.Sequential(*decoder_modules[i]) for i in range(n_cate)])
-        self.reduceDim = nn.Linear(self.maxItem * 64, self.in_dims[0])
-        # self.decodeDim = nn.Linear(self.in_dims[0], self.maxItem * 64)
-        self.predictItem = nn.Linear(self.in_dims[0], self.n_item)
-        self.activateF = nn.Sigmoid()
-        self.loss = torch.nn.MSELoss()
+            
         self.apply(xavier_normal_initialization)
-    
-
+        
     def Encode(self, batch):
         batch = self.dropout(batch)
-        batch = self.reduceDim(batch)
-
-        return '', batch, ''
-
         if self.n_cate == 1:
             hidden = self.encoder(batch)
             mu = hidden[:, :self.in_dims[-1]]
@@ -172,6 +163,7 @@ class AutoEncoder(nn.Module):
                 latent = mu
 
             kl_divergence = -0.5 * torch.mean(torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1))
+
             return torch.cat(tuple(batch_cate), dim=-1), latent, kl_divergence
     
     def reparamterization(self, mu, logvar):
@@ -180,8 +172,6 @@ class AutoEncoder(nn.Module):
         return eps.mul(std).add_(mu)
     
     def Decode(self, batch):
-        return self.activateF(self.predictItem(batch))
-
         if len(self.out_dims) == 0 or self.n_cate == 1:  # one-layer decoder
             return self.decoder(batch)
         else:
@@ -199,8 +189,7 @@ class AutoEncoder(nn.Module):
             return pred
     
 def compute_loss(recon_x, x):
-    return torch.nn.MSELoss()(recon_x, x)
-    # return -torch.mean(torch.sum(F.log_softmax(recon_x, 1) * x, -1))  # multinomial log likelihood in MultVAE
+    return -torch.mean(torch.sum(F.log_softmax(recon_x, 1) * x, -1))  # multinomial log likelihood in MultVAE
 
 
 def xavier_normal_initialization(module):

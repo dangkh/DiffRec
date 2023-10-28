@@ -119,7 +119,7 @@ class GaussianDiffusion(nn.Module):
                 x_t = out["mean"]
         return x_t
     
-    def training_losses(self, model, x_start, reweight=False):
+    def training_losses(self, model, x_start, reweight=False, batchMask=None):
         batch_size, device = x_start.size(0), x_start.device
         ts, pt = self.sample_timesteps(batch_size, device, 'importance')
         noise = th.randn_like(x_start)
@@ -129,6 +129,9 @@ class GaussianDiffusion(nn.Module):
             x_t = x_start
 
         terms = {}
+        print(x_t.shape)
+        print(batchMask.shape)
+        stop
         model_output = model(x_t, ts)
         target = {
             ModelMeanType.START_X: x_start,

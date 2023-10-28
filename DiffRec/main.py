@@ -53,7 +53,7 @@ parser.add_argument('--round', type=int, default=1, help='record the experiment'
 
 # params for the model
 parser.add_argument('--time_type', type=str, default='cat', help='cat or add')
-parser.add_argument('--dims', type=str, default='[1000]', help='the dims for the DNN')
+parser.add_argument('--dims', type=str, default='[200, 600]', help='the dims for the DNN')
 parser.add_argument('--norm', type=bool, default=False, help='Normalize the input or not')
 parser.add_argument('--emb_size', type=int, default=10, help='timestep embedding size')
 
@@ -67,6 +67,7 @@ parser.add_argument('--noise_max', type=float, default=0.02, help='noise upper b
 parser.add_argument('--sampling_noise', type=bool, default=False, help='sampling with noise or not')
 parser.add_argument('--sampling_steps', type=int, default=0, help='steps of the forward process during inference')
 parser.add_argument('--reweight', type=bool, default=True, help='assign different weight to different timestep or not')
+parser.add_argument('--maskSize', type=int, default=10, help='mask diffusion size')
 
 args = parser.parse_args()
 print("args:", args)
@@ -83,7 +84,7 @@ test_path = args.data_path + 'test_list.npy'
 
 train_data, valid_y_data, test_y_data, n_user, n_item = data_utils.data_load(train_path, valid_path, test_path)
 train_dataset = data_utils.DataDiffusion(torch.FloatTensor(train_data.A))
-train_loader = DataLoader(train_dataset, batch_size=args.batch_size, pin_memory=True, shuffle=True, num_workers=4, worker_init_fn=worker_init_fn)
+train_loader = DataLoader(train_dataset, batch_size=args.batch_size, pin_memory=True, shuffle=True)
 test_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=False)
 
 if args.tst_w_val:
@@ -147,6 +148,12 @@ def evaluate(data_loader, data_te, mask_his, topN):
 best_recall, best_epoch = -100, 0
 best_test_result = None
 print("Start training...")
+numI = 2810
+numMasked = numI // 100 * args.maskSize
+remainder = numI - numMasked
+masks = np.vstack([np.hstack([[1]*remainder, [0]*numMasked]) for x in range(1000)])
+for ii in range(len(masks)):
+    np.random.shuffle(masks[ii])
 for epoch in range(1, args.epochs + 1):
     if epoch - best_epoch >= 20:
         print('-'*18)
@@ -160,10 +167,12 @@ for epoch in range(1, args.epochs + 1):
     total_loss = 0.0
     
     for batch_idx, batch in enumerate(train_loader):
+        np.random.shuffle(masks)
+        batchMask = masks[:args.batch_size]
         batch = batch.to(device)
         batch_count += 1
         optimizer.zero_grad()
-        losses = diffusion.training_losses(model, batch, args.reweight)
+        losses = diffusion.training_losses(model, batch, args.reweight, batchMask)
         loss = losses["loss"].mean()
         total_loss += loss
         loss.backward()

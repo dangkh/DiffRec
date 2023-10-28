@@ -41,8 +41,8 @@ def seed_worker(worker_id):
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', type=str, default='yelp_clean', help='choose the dataset')
-parser.add_argument('--data_path', type=str, default='./datasets/', help='load data path')
-parser.add_argument('--emb_path', type=str, default='./datasets/')
+parser.add_argument('--data_path', type=str, default='../datasets/', help='load data path')
+parser.add_argument('--emb_path', type=str, default='../datasets/')
 parser.add_argument('--batch_size', type=int, default=400)
 parser.add_argument('--topN', type=str, default='[10, 20, 50, 100]')
 parser.add_argument('--tst_w_val', action='store_true', help='test with validation')
@@ -142,8 +142,8 @@ elif args.dataset == "yelp_clean":
     model_name = "yelp_clean_0.0005lr1_0.0001lr2_0.0wd1_0.0wd2_bs400_cate2_in[300]_out[]_lam0.03_dims[300]_emb10_x0_steps5_scale0.01_min0.005_max0.01_sample0_reweight0_log.pth"
     AE_name = "yelp_clean_0.0005lr1_0.0001lr2_0.0wd1_0.0wd2_bs400_cate2_in[300]_out[]_lam0.03_dims[300]_emb10_x0_steps5_scale0.01_min0.005_max0.01_sample0_reweight0_log_AE.pth"
 elif args.dataset == "ml-1m_clean":
-    model_name = "ml-1m_clean_0.001lr1_0.0005lr2_0.0wd1_0.0wd2_bs400_cate2_in[300]_out[]_lam0.03_dims[300]_emb10_x0_steps40_scale0.005_min0.005_max0.02_sample0_reweight1_log.pth"
-    AE_name = "ml-1m_clean_0.001lr1_0.0005lr2_0.0wd1_0.0wd2_bs400_cate2_in[300]_out[]_lam0.03_dims[300]_emb10_x0_steps40_scale0.005_min0.005_max0.02_sample0_reweight1_log_AE.pth"
+    model_name = "ml-1m_clean_0.001lr1_0.0005lr2_0.0wd1_0.0wd2_bs400_cate3_in[300]_out[]_lam0.03_dims[300]_emb10_x0_steps40_scale0.005_min0.005_max0.02_sample0_reweightTrue_log.pth"
+    AE_name = "ml-1m_clean_0.001lr1_0.0005lr2_0.0wd1_0.0wd2_bs400_cate3_in[300]_out[]_lam0.03_dims[300]_emb10_x0_steps40_scale0.005_min0.005_max0.02_sample0_reweightTrue_log_AE.pth"
 elif args.dataset == "amazon-book_noisy":
     model_name = "amazon-book_noisy_0.0005lr1_0.0001lr2_0.0wd1_0.0wd2_bs400_cate2_in[300]_out[]_lam0.07_dims[300]_emb10_x0_steps5_scale0.5_min0.001_max0.005_sample0_reweight1_log.pth"
     AE_name = "amazon-book_noisy_0.0005lr1_0.0001lr2_0.0wd1_0.0wd2_bs400_cate2_in[300]_out[]_lam0.07_dims[300]_emb10_x0_steps5_scale0.5_min0.001_max0.005_sample0_reweight1_log_AE.pth"
