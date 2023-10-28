@@ -53,7 +53,7 @@ parser.add_argument('--round', type=int, default=1, help='record the experiment'
 
 # params for the model
 parser.add_argument('--time_type', type=str, default='cat', help='cat or add')
-parser.add_argument('--dims', type=str, default='[200, 600]', help='the dims for the DNN')
+parser.add_argument('--dims', type=str, default='[1000]', help='the dims for the DNN')
 parser.add_argument('--norm', type=bool, default=False, help='Normalize the input or not')
 parser.add_argument('--emb_size', type=int, default=10, help='timestep embedding size')
 
@@ -67,7 +67,7 @@ parser.add_argument('--noise_max', type=float, default=0.02, help='noise upper b
 parser.add_argument('--sampling_noise', type=bool, default=False, help='sampling with noise or not')
 parser.add_argument('--sampling_steps', type=int, default=0, help='steps of the forward process during inference')
 parser.add_argument('--reweight', type=bool, default=True, help='assign different weight to different timestep or not')
-parser.add_argument('--maskSize', type=int, default=10, help='mask diffusion size')
+parser.add_argument('--maskSize', type=int, default=50, help='mask diffusion size')
 
 args = parser.parse_args()
 print("args:", args)
@@ -132,9 +132,15 @@ def evaluate(data_loader, data_te, mask_his, topN):
     
     with torch.no_grad():
         for batch_idx, batch in enumerate(data_loader):
+            np.random.shuffle(np.copy(masks))
+            batchMask = masks[:len(batch)]
+            maskedItem = np.ones_like(batchMask) - batchMask
+
+            maskedBatch = torch.from_numpy(maskedItem) * batch
+            remaindItem = torch.from_numpy(batchMask) * batch
             his_data = mask_his[e_idxlist[batch_idx*args.batch_size:batch_idx*args.batch_size+len(batch)]]
             batch = batch.to(device)
-            prediction = diffusion.p_sample(model, batch, args.sampling_steps, args.sampling_noise)
+            prediction = diffusion.p_sample(model, maskedBatch, args.sampling_steps, args.sampling_noise, remaindItem)
             prediction[his_data.nonzero()] = -np.inf
 
             _, indices = torch.topk(prediction, topN[-1])
@@ -167,12 +173,16 @@ for epoch in range(1, args.epochs + 1):
     total_loss = 0.0
     
     for batch_idx, batch in enumerate(train_loader):
-        np.random.shuffle(masks)
-        batchMask = masks[:args.batch_size]
+        np.random.shuffle(np.copy(masks))
+        batchMask = masks[:len(batch)]
+        maskedItem = np.ones_like(batchMask) - batchMask
+
+        maskedBatch = torch.from_numpy(maskedItem) * batch
+        remaindItem = torch.from_numpy(batchMask) * batch
         batch = batch.to(device)
         batch_count += 1
         optimizer.zero_grad()
-        losses = diffusion.training_losses(model, batch, args.reweight, batchMask)
+        losses = diffusion.training_losses(model, maskedBatch, args.reweight, remaindItem)
         loss = losses["loss"].mean()
         total_loss += loss
         loss.backward()
