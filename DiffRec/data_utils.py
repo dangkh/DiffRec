@@ -65,8 +65,19 @@ def data_load(train_path, valid_path, test_path):
 class DataDiffusion(Dataset):
     def __init__(self, data):
         self.data = data
+        self.pos = []
+        for line in self.data:
+            ll = torch.where(line == 1)[0]
+            lenLL = len(ll)
+            compensation = len(self.data[0]) - lenLL
+            lcom = torch.zeros(compensation)
+            newLL = torch.cat((ll, lcom), 0)
+            self.pos.append([lenLL, newLL])
+
     def __getitem__(self, index):
         item = self.data[index]
-        return item
+        return [item, self.pos[index]]
+
+
     def __len__(self):
         return len(self.data)
