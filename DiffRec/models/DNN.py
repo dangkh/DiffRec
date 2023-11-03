@@ -71,7 +71,7 @@ class DNN(nn.Module):
         if self.norm:
             x = F.normalize(x)
         x = self.drop(x)
-        h = torch.cat([x, emb], dim=-1)
+        h = torch.cat([x+maskInfo, emb], dim=-1)
         for i, layer in enumerate(self.in_layers):
             h = layer(h)
             h = torch.tanh(h)

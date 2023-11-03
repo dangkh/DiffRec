@@ -138,8 +138,10 @@ def evaluate(data_loader, data_te, mask_his, topN):
             for itemBatch in range(len(batchMask)):
                 lenLL = lpos[itemBatch]
                 LL = dpos[itemBatch]
-                mPos = LL[random.randint(0,lenLL)]
-                batchMask[itemBatch][int(mPos.item())] = 0
+                mPos1 = LL[random.randint(0,lenLL)]
+                mPos2 = LL[random.randint(0,lenLL)]
+                batchMask[itemBatch][int(mPos1.item())] = 0
+                batchMask[itemBatch][int(mPos2.item())] = 0
 
             maskedItem = np.ones_like(batchMask) - batchMask
             maskedBatch = torch.from_numpy(maskedItem) * batch
@@ -149,7 +151,7 @@ def evaluate(data_loader, data_te, mask_his, topN):
             his_data = mask_his[e_idxlist[batch_idx*args.batch_size:batch_idx*args.batch_size+len(batch)]]
             maskedBatch = maskedBatch.to(device)
             remaindItem = remaindItem.to(device)
-            prediction = diffusion.p_sample(model, maskedBatch, args.sampling_steps, args.sampling_noise, remaindItem)
+            prediction = diffusion.p_sample(model, remaindItem , args.sampling_steps, args.sampling_noise, maskedBatch)
             prediction[his_data.nonzero()] = -np.inf
 
             _, indices = torch.topk(prediction, topN[-1])
@@ -190,8 +192,10 @@ for epoch in range(1, args.epochs + 1):
         for itemBatch in range(len(batchMask)):
             lenLL = lpos[itemBatch]
             LL = dpos[itemBatch]
-            mPos = LL[random.randint(0,lenLL)]
-            batchMask[itemBatch][int(mPos.item())] = 0
+            mPos1 = LL[random.randint(0,lenLL)]
+            mPos2 = LL[random.randint(0,lenLL)]
+            batchMask[itemBatch][int(mPos1.item())] = 0
+            batchMask[itemBatch][int(mPos2.item())] = 0
 
         maskedItem = np.ones_like(batchMask) - batchMask
         maskedBatch = torch.from_numpy(maskedItem) * batch
