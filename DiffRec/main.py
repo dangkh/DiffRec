@@ -139,9 +139,9 @@ def evaluate(data_loader, data_te, mask_his, topN):
                 lenLL = lpos[itemBatch]
                 LL = dpos[itemBatch]
                 mPos1 = LL[random.randint(0,lenLL)]
-                mPos2 = LL[random.randint(0,lenLL)]
-                batchMask[itemBatch][int(mPos1.item())] = 0
-                batchMask[itemBatch][int(mPos2.item())] = 0
+                # mPos2 = LL[random.randint(0,lenLL)]
+                # batchMask[itemBatch][int(mPos1.item())] = 0
+                # batchMask[itemBatch][int(mPos2.item())] = 0
 
             maskedItem = np.ones_like(batchMask) - batchMask
             maskedBatch = torch.from_numpy(maskedItem) * batch
@@ -172,10 +172,10 @@ print("Start training...")
 # for ii in range(len(masks)):
 #     np.random.shuffle(masks[ii])
 for epoch in range(1, args.epochs + 1):
-    # if epoch - best_epoch >= 20:
-        # print('-'*18)
-        # print('Exiting from training early')
-        # break
+    if epoch - best_epoch >= 20:
+        print('-'*18)
+        print('Exiting from training early')
+        break
 
     model.train()
     start_time = time.time()
@@ -192,10 +192,11 @@ for epoch in range(1, args.epochs + 1):
         for itemBatch in range(len(batchMask)):
             lenLL = lpos[itemBatch]
             LL = dpos[itemBatch]
+            # if np.random.randint(1,10) % 3 == 0: continue
             mPos1 = LL[random.randint(0,lenLL)]
-            mPos2 = LL[random.randint(0,lenLL)]
+            # mPos2 = LL[random.randint(0,lenLL)]
             batchMask[itemBatch][int(mPos1.item())] = 0
-            batchMask[itemBatch][int(mPos2.item())] = 0
+            # batchMask[itemBatch][int(mPos2.item())] = 0
 
         maskedItem = np.ones_like(batchMask) - batchMask
         maskedBatch = torch.from_numpy(maskedItem) * batch
