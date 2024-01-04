@@ -59,7 +59,7 @@ parser.add_argument('--round', type=int, default=1, help='record the experiment'
 
 # params for the Autoencoder
 parser.add_argument('--n_cate', type=int, default=2, help='category num of items')
-parser.add_argument('--in_dims', type=str, default='[300]', help='the dims for the encoder')
+parser.add_argument('--in_dims', type=str, default='[200, 600, 1000]', help='the dims for the encoder')
 parser.add_argument('--out_dims', type=str, default='[]', help='the hidden dims for the decoder')
 parser.add_argument('--act_func', type=str, default='tanh', help='activation function for autoencoder')
 parser.add_argument('--lamda', type=float, default=0.03, help='hyper-parameter of multinomial log-likelihood for AE: 0.01, 0.02, 0.03, 0.05')
@@ -72,7 +72,7 @@ parser.add_argument('--reparam', type=bool, default=True, help="Autoencoder with
 
 # params for the MLP
 parser.add_argument('--time_type', type=str, default='cat', help='cat or add')
-parser.add_argument('--mlp_dims', type=str, default='[300]', help='the dims for the DNN')
+parser.add_argument('--mlp_dims', type=str, default='[200, 600, 1000]', help='the dims for the DNN')
 parser.add_argument('--norm', type=bool, default=False, help='Normalize the input or not')
 parser.add_argument('--emb_size', type=int, default=10, help='timestep embedding size')
 parser.add_argument('--mlp_act_func', type=str, default='tanh', help='the activation function for MLP')
@@ -186,14 +186,31 @@ def evaluate(data_loader, data_te, mask_his, topN):
         category_map = Autoencoder.category_map.to(device)
     
     with torch.no_grad():
-        for batch_idx, batch in enumerate(data_loader):
-            batch = batch.to(device)
+        for batch_idx, batchInfo in enumerate(data_loader):
+            batch, pos = batchInfo
+            lpos, dpos = pos
+            batchMask = np.ones_like(batch)
+            for itemBatch in range(len(batchMask)):
+                lenLL = lpos[itemBatch]
+                LL = dpos[itemBatch]
+                mPos1 = LL[random.randint(0,lenLL)]
+                # mPos2 = LL[random.randint(0,lenLL)]
+                # batchMask[itemBatch][int(mPos1.item())] = 0
+                # batchMask[itemBatch][int(mPos2.item())] = 0
+
+            maskedItem = np.ones_like(batchMask) - batchMask
+            maskedBatch = torch.from_numpy(maskedItem) * batch
+            remaindItem = torch.from_numpy(batchMask) * batch
+            maskedBatch = maskedBatch.to(device)
+            remaindItem = remaindItem.to(device)
 
             # mask map
             his_data = mask_his[e_idxlist[batch_idx*args.batch_size:batch_idx*args.batch_size+len(batch)]]
 
-            _, batch_latent, _ = Autoencoder.Encode(batch)
-            batch_latent_recon = diffusion.p_sample(model, batch_latent, args.sampling_steps, args.sampling_noise)
+            _, batch_latent, _ = Autoencoder.Encode(remaindItem)
+            _, mask_batch_latent, _ = Autoencoder.Encode(maskedBatch)
+
+            batch_latent_recon = diffusion.p_sample(model, batch_latent , args.sampling_steps, args.sampling_noise, mask_batch_latent)
             prediction = Autoencoder.Decode(batch_latent_recon)  # [batch_size, n1_items + n2_items + n3_items]
 
             prediction[his_data.nonzero()] = -np.inf  # mask ui pairs in train & validation set
@@ -222,8 +239,6 @@ if args.n_cate > 1:
     start_time = time.time()
     category_map = Autoencoder.category_map.cpu().numpy()
     reverse_map = {category_map[i]:i for i in range(len(category_map))}
-    print(reverse_map)
-    stop
     # mask for validation: train_dataset
     mask_idx_train = list(train_data.nonzero())
     mapped_mask_iid_train = np.array([reverse_map[mask_idx_train[1][i]] for i in range(len(mask_idx_train[0]))])
@@ -243,7 +258,6 @@ else:
     mask_train = train_data
 
 print("Start training...")
-stop
 for epoch in range(1, args.epochs + 1):
     # if epoch - best_epoch >= 20:
     #     print('-'*18)
@@ -258,15 +272,34 @@ for epoch in range(1, args.epochs + 1):
     batch_count = 0
     total_loss = 0.0
     
-    for batch_idx, batch in enumerate(train_loader):
-        batch = batch.to(device)
+    for batch_idx, batchInfo in enumerate(train_loader):
+        batch, pos = batchInfo
+        lpos, dpos = pos
+        batchMask = np.ones_like(batch)
+        for itemBatch in range(len(batchMask)):
+            lenLL = lpos[itemBatch]
+            LL = dpos[itemBatch]
+            # if np.random.randint(1,10) % 3 == 0: continue
+            mPos1 = LL[random.randint(0,lenLL)]
+            # mPos2 = LL[random.randint(0,lenLL)]
+            batchMask[itemBatch][int(mPos1.item())] = 0
+            # batchMask[itemBatch][int(mPos2.item())] = 0
+
+        maskedItem = np.ones_like(batchMask) - batchMask
+        maskedBatch = torch.from_numpy(maskedItem) * batch
+        remaindItem = torch.from_numpy(batchMask) * batch
+        maskedBatch = maskedBatch.to(device)
+        remaindItem = remaindItem.to(device)
+
+        # batch = batch.to(device)
         batch_count += 1
         optimizer1.zero_grad()
         optimizer2.zero_grad()
 
-        batch_cate, batch_latent, vae_kl = Autoencoder.Encode(batch)
+        batch_cate, batch_latent, vae_kl = Autoencoder.Encode(remaindItem)
+        _, mask_batch_latent, _ = Autoencoder.Encode(maskedBatch)
 
-        terms = diffusion.training_losses(model, batch_latent, args.reweight)
+        terms = diffusion.training_losses(model, batch_latent, args.reweight,  mask_batch_latent)
         elbo = terms["loss"].mean()  # loss from diffusion
         batch_latent_recon = terms["pred_xstart"]
 

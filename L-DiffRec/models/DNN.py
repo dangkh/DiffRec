@@ -61,13 +61,13 @@ class DNN(nn.Module):
 
         self.apply(xavier_normal_initialization)
     
-    def forward(self, x, timesteps):
+    def forward(self, x, timesteps, maskInfo):
         time_emb = timestep_embedding(timesteps, self.time_emb_dim).to(x.device)
         emb = self.emb_layer(time_emb)
         if self.norm:
             x = F.normalize(x, dim=-1)
         x = self.dropout(x)
-        h = torch.cat([x, emb], dim=-1)
+        h = torch.cat([x+maskInfo, emb], dim=-1)
         h = self.in_layers(h)
         h = self.out_layers(h)
 
