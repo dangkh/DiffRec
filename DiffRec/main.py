@@ -172,7 +172,7 @@ print("Start training...")
 # for ii in range(len(masks)):
 #     np.random.shuffle(masks[ii])
 for epoch in range(1, args.epochs + 1):
-    if epoch - best_epoch >= 20:
+    if epoch - best_epoch >= 200:
         print('-'*18)
         print('Exiting from training early')
         break
@@ -203,6 +203,7 @@ for epoch in range(1, args.epochs + 1):
         remaindItem = torch.from_numpy(batchMask) * batch
         maskedBatch = maskedBatch.to(device)
         remaindItem = remaindItem.to(device)
+        batch = batch.to(device)
 
 
         batch_count += 1
@@ -211,7 +212,7 @@ for epoch in range(1, args.epochs + 1):
         loss = losses["loss"].mean()
         prediction = diffusion.p_sample(model, remaindItem , args.sampling_steps, args.sampling_noise, maskedBatch)
         BCE = -torch.mean(torch.sum(F.log_softmax(prediction, 1) * batch, -1))
-        total_loss += loss + BCE
+        total_loss += loss + BCE * 0.1
         loss.backward()
         optimizer.step()
     
