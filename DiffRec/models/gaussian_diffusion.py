@@ -172,7 +172,7 @@ class GaussianDiffusion(nn.Module):
 
         terms["loss"] /= pt
         return terms
-
+ 
     def sample_timesteps(self, batch_size, device, method='uniform', uniform_prob=0.001):
         if method == 'importance':  # importance sampling
             if not (self.Lt_count == self.history_num_per_term).all():
