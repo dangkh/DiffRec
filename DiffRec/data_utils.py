@@ -76,7 +76,7 @@ class DataDiffusion(Dataset):
 
     def __getitem__(self, index):
         item = self.data[index]
-        return [item, self.pos[index]]
+        return [index, item, self.pos[index]]
 
 
     def __len__(self):

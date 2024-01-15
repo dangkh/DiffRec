@@ -92,6 +92,12 @@ if args.tst_w_val:
     test_twv_loader = DataLoader(tv_dataset, batch_size=args.batch_size, shuffle=False)
 mask_tv = train_data + valid_y_data
 
+emb_path = args.data_path + '/iEmb.npy'
+item_emb = torch.from_numpy(np.load(emb_path, allow_pickle=True))
+
+u_emb_path = args.data_path + '/uEmb.npy'
+user_emb = torch.from_numpy(np.load(u_emb_path, allow_pickle=True))
+print(f'{user_emb.shape} user embedding shape, {item_emb.shape} item embedding shape')
 print('data ready.')
 
 
@@ -132,26 +138,22 @@ def evaluate(data_loader, data_te, mask_his, topN):
     
     with torch.no_grad():
         for batch_idx, batchInfo in enumerate(data_loader):
-            batch, pos = batchInfo
+            users, batch, pos = batchInfo
             lpos, dpos = pos
             batchMask = np.ones_like(batch)
-            for itemBatch in range(len(batchMask)):
-                lenLL = lpos[itemBatch]
-                LL = dpos[itemBatch]
-                mPos1 = LL[random.randint(0,lenLL)]
-                # mPos2 = LL[random.randint(0,lenLL)]
-                # batchMask[itemBatch][int(mPos1.item())] = 0
-                # batchMask[itemBatch][int(mPos2.item())] = 0
 
-            maskedItem = np.ones_like(batchMask) - batchMask
-            maskedBatch = torch.from_numpy(maskedItem) * batch
-            remaindItem = torch.from_numpy(batchMask) * batch
+            # maskedItem = np.ones_like(batchMask) - batchMask
+            # maskedBatch = torch.from_numpy(maskedItem) * batch
+            # remaindItem = torch.from_numpy(batchMask) * batch
 
 
             his_data = mask_his[e_idxlist[batch_idx*args.batch_size:batch_idx*args.batch_size+len(batch)]]
-            maskedBatch = maskedBatch.to(device)
-            remaindItem = remaindItem.to(device)
-            prediction = diffusion.p_sample(model, remaindItem , args.sampling_steps, args.sampling_noise, maskedBatch)
+            # maskedBatch = maskedBatch.to(device)
+            # remaindItem = remaindItem.to(device)
+            # prediction = diffusion.p_sample(model, remaindItem , args.sampling_steps, args.sampling_noise, maskedBatch)
+            # print(prediction.shape)
+            users_embedding = user_emb[users]
+            prediction = torch.matmul(users_embedding, torch.transpose(item_emb, 0, 1))
             prediction[his_data.nonzero()] = -np.inf
 
             _, indices = torch.topk(prediction, topN[-1])
@@ -185,7 +187,7 @@ for epoch in range(1, args.epochs + 1):
     
     for batch_idx, batchInfo in enumerate(train_loader):
         # batchInfo contains batch and position of interacted item
-        batch, pos = batchInfo
+        users, batch, pos = batchInfo
         # get number of interacted item, and position
         lpos, dpos = pos
         batchMask = np.ones_like(batch)
@@ -239,12 +241,12 @@ for epoch in range(1, args.epochs + 1):
                         "%H: %M: %S", time.gmtime(time.time()-start_time)))
     print('---'*18)
 
-print('==='*18)
-print("End. Best Epoch {:03d} ".format(best_epoch))
-evaluate_utils.print_results(None, best_results, best_test_results)   
-print("End time: ", time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())))
+# print('==='*18)
+# print("End. Best Epoch {:03d} ".format(best_epoch))
+# evaluate_utils.print_results(None, best_results, best_test_results)   
+# print("End time: ", time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())))
 
 
-
-
-
+valid_results = evaluate(test_loader, valid_y_data, train_data, eval(args.topN))
+test_results = evaluate(test_loader, test_y_data, mask_tv, eval(args.topN))
+evaluate_utils.print_results(None, valid_results, test_results)
