@@ -3,3 +3,4 @@
 *.pyc
 *.pth
 .DS_Store
+/datasets/
